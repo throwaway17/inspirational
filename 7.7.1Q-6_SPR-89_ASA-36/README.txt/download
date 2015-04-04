@@ -1,0 +1,40 @@
+1. Create a workspace containing vanilla "android-4.0.4_r2.1" release from Google. You may need to apply the following change in build repo to prevent the build from aborting when unexpected user tag is found on some modules:
+
+diff --git a/core/base_rules.mk b/core/base_rules.mk
+index 3c11673..ecf611d 100644
+--- a/core/base_rules.mk
++++ b/core/base_rules.mk
+@@ -99,7 +99,7 @@ ifneq ($(filter $(LOCAL_MODULE_TAGS),user),)
+     $(warning * PRODUCT_PACKAGES section of)
+     $(warning * build/target/product/core.mk)
+     $(warning * )
+-    $(error user tag detected on new module - user tags are only supported on legacy modules)
++    $(warning user tag detected on new module - user tags are only supported on legacy modules)
+   endif
+ endif
+
+2. Overlay Motorola-provided published repos on top of original Google versions. 
+
+3. Build user space components:
+
+   cd <workspace>
+   . build/envsetup.sh
+   lunch generic-user
+   make BOARD_HAVE_BLUETOOTH=true TARGET_BOARD_PLATFORM=msm8960 <target>   
+
+   Example for <target>: out/target/product/generic/system/bin/bluetoothd
+
+4. Building kernel and kernel modules. 
+
+   make -C kernel O=../out/target/product/generic/obj/KERNEL_OBJ ARCH=arm CROSS_COMPILE=arm-eabi- msm8960_mmi_defconfig
+
+   make -C kernel O=../out/target/product/generic/obj/KERNEL_OBJ ARCH=arm CROSS_COMPILE=arm-eabi- headers_install
+
+   make -C kernel O=../out/target/product/generic/obj/KERNEL_OBJ ARCH=arm CROSS_COMPILE=arm-eabi-
+
+   make -C kernel O=../out/target/product/generic/obj/KERNEL_OBJ ARCH=arm CROSS_COMPILE=arm-eabi- modules
+
+   make -C kernel O=../out/target/product/generic/obj/KERNEL_OBJ INSTALL_MOD_PATH=../../system ARCH=arm CROSS_COMPILE=arm-eabi- modules_install
+
+   make -C kernel M=../vendor/authentec/vpndriver O=../out/target/product/generic/obj/KERNEL_OBJ ARCH=arm CROSS_COMPILE=arm-eabi- modules MODNAME=vpnclient BOARD_PLATFORM=msm8960
+     

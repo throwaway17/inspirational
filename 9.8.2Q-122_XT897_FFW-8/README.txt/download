@@ -1,0 +1,53 @@
+ 1. Create a workspace containing "vanilla" JB release from Google. You may need to apply the following change in build repo to prevent the build from aborting when unexpected _user_ tag is found on some modules:
+
+        diff --git a/core/base_rules.mk b/core/base_rules.mk
+        index 3c11673..ecf611d 100644
+        --- a/core/base_rules.mk
+        +++ b/core/base_rules.mk
+        @@ -99,7 +99,7 @@ ifneq ($(filter $(LOCAL_MODULE_TAGS),user),)
+             $(warning * PRODUCT_PACKAGES section of)
+             $(warning * build/target/product/core.mk)
+             $(warning * )
+        -    $(error user tag detected on new module - user tags are only supported on legacy modules)
+        +    $(warning user tag detected on new module - user tags are only supported on legacy modules)
+           endif
+         endif
+  
+
+ 2. Overlay Motorola-provided published repos on top of original Google versions. 
+
+ 3. Build user space components:
+
+        cd <workspace>
+        . build/envsetup.sh
+        lunch generic-user
+        make BOARD_HAVE_BLUETOOTH=true TARGET_BOARD_PLATFORM=msm8960 <target>
+
+    Where <target> is something like `out/target/product/generic/system/bin/bluetoothd`
+
+ 4. Building kernel and kernel modules:
+        
+        my_top_dir=$PWD
+        mkdir -p $PWD/out/target/product/generic/obj/kernel
+        cross=$my_top_dir/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+        kernel_out_dir=$PWD/out/target/product/generic/obj/kernel
+
+        make  -C kernel ARCH=arm  CROSS_COMPILE=$cross  O=$kernel_out_dir msm8960_mmi_defconfig
+        make  -C kernel ARCH=arm  CROSS_COMPILE=$cross  O=$kernel_out_dir headers_install
+        make  -C kernel ARCH=arm  CROSS_COMPILE=$cross  O=$kernel_out_dir
+        make  -C kernel ARCH=arm  CROSS_COMPILE=$cross  O=$kernel_out_dir modules
+        make  -C kernel ARCH=arm  CROSS_COMPILE=$cross  O=$kernel_out_dir INSTALL_MOD_PATH=$PWD/out/target/product/generic modules_install
+
+
+Build moto_crypto:
+-------------------:
+
+        TARGET_TOOLS_PREFIX="$PWD/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.6/bin/arm-linux-androideabi-" motorola/security/moto_crypto/moto_crypto.sh -c generic  -a arm -o $kernel_out_dir -u $PWD/out/target/product/generic/system
+
+
+Build vpndriver:
+-------------------:
+
+        make -C kernel M=../vendor/authentec/vpndriver O=$kernel_out_dir ARCH=arm CROSS_COMPILE=$cross modules MODNAME=vpnclient BOARD_PLATFORM=msm8960 CONFIG_FSNOTIFY=
+
+
